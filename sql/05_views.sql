@@ -113,3 +113,31 @@ SELECT
     -- 6. Lojalność: Suma punktów "w obiegu" (Zobowiązanie klubu wobec klientów)
     (SELECT COALESCE(SUM(ilosc_punktow), 0) 
      FROM Punkty_Lojalnosciowe) AS punkty_w_obiegu_suma;
+
+-- ==========================================
+-- WIDOK 6: Raport Efektywności Trenerów (Kto przyciąga tłumy?)
+-- Co robi: Liczy ile zajęć poprowadził trener i ilu łącznie ludzi na nie przyszło.
+-- Używamy LEFT JOIN, żeby pokazać też trenerów, którzy jeszcze nie mieli zajęć (z zerami).
+-- ==========================================
+CREATE OR REPLACE VIEW vw_oblozenie_trenerow AS
+SELECT 
+    t.id_trenera,
+    t.imie,
+    t.nazwisko,
+    t.specjalizacja,
+    -- Liczba zaplanowanych/przeprowadzonych zajęć
+    COUNT(DISTINCT h.id_harmonogramu) AS liczba_zajec,
+    -- Łączna liczba zapisanych osób (nie anulowanych)
+    COUNT(z.id_zapisu) FILTER (WHERE z.status_obecnosci != 'Anulowany') AS suma_uczestnikow,
+    -- Średnia frekwencja na zajęciach (zaokrąglona do 1 miejsca po przecinku)
+    ROUND(
+        CASE WHEN COUNT(DISTINCT h.id_harmonogramu) > 0 
+             THEN COUNT(z.id_zapisu)::NUMERIC / COUNT(DISTINCT h.id_harmonogramu) 
+             ELSE 0 
+        END, 1
+    ) AS srednia_na_zajecia
+FROM Trenerzy t
+LEFT JOIN Harmonogram_Zajec h ON t.id_trenera = h.id_trenera
+LEFT JOIN Zapisy_Na_Zajecia z ON h.id_harmonogramu = z.id_harmonogramu
+GROUP BY t.id_trenera, t.imie, t.nazwisko, t.specjalizacja
+ORDER BY suma_uczestnikow DESC;
