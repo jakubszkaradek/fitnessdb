@@ -1,0 +1,38 @@
+CHANGELOG - Projekt Bazy Danych "Fitness Club"
+Data aktualizacji: 19.11.2025
+Autorzy: Jakub Szkaradek, Bartłomiej Ząbek
+
+[ZMIANY KRYTYCZNE I STRUKTURALNE]
+
+1. Tabela Harmonogram_Zajec:
+   - USUNIĘTO: Kolumnę 'id_klienta'.
+     Powód: Poprawa błędnej relacji 1:1 na relację 1:N (zajęcia mają wielu uczestników w tabeli Zapisy).
+   - ZMODYFIKOWANO: Typ danych 'data_rozpoczecia' z DATE na TIMESTAMP.
+     Powód: Konieczność przechowywania godziny rozpoczęcia zajęć, a nie tylko dnia.
+   - DODANO: Kolumnę 'limit_miejsc'.
+     Powód: Umożliwienie kontroli obłożenia sali (wymagane do triggerów).
+
+2. Moduł Nagród i Lojalności:
+   - DODANO: Nową tabelę łącznikową 'Klienci_Nagrody'.
+     Powód: Obsługa relacji wiele-do-wielu (jeden klient może kupić wiele nagród).
+   - DODANO: Kolumnę 'koszt_punktowy_w_momencie_zakupu' w tabeli łącznikowej.
+     Powód: Zabezpieczenie historii transakcji przed zmianami w cenniku nagród (Data Integrity).
+
+3. Moduł Karnetów i Płatności:
+   - DODANO: Kolumnę 'cena_transakcyjna' w tabeli 'Sprzedane_Karnety'.
+     Powód: Archiwizacja ceny rzeczywistej w dniu zakupu (niezależnie od zmian w cenniku ogólnym).
+   - ZMODYFIKOWANO: Relację tabeli 'Platnosci'.
+     Powód: Bezpośrednie powiązanie płatności z konkretnym 'id_sprzedanego_karnetu' zamiast luźnej asocjacji.
+
+[USPRAWNIENIA TECHNICZNE]
+
+4. Typy Danych i Więzy Integralności:
+   - WPROWADZONO: Typy wyliczeniowe (ENUM) dla statusów:
+     * karnet_status (Aktywny, Wygasły, Zamrozony, Anulowany)
+     * obecnosc_status (Obecny, Nieobecny, Anulowany)
+     * metoda_platnosci (Karta, Gotowka, Przelew, Blik)
+   - DODANO: Mechanizm "Soft Delete" (kolumny 'czy_aktywny', 'data_usuniecia') dla tabel Klienci i Trenerzy.
+   - DODANO: Indeksy (INDEX) na kluczach obcych i polach często wyszukiwanych (email, status).
+
+5. Logika Biznesowa:
+   - DODANO: Kolumnę 'liczba_wykorzystanych_wejsc' w 'Sprzedane_Karnety' do obsługi karnetów ilościowych.
