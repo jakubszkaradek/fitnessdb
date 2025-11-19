@@ -1,0 +1,41 @@
+# --- System operacyjny (Windows/Mac/Linux) ---
+.DS_Store
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# --- DBeaver (Ważne! Nie chcemy lokalnych ustawień i cache) ---
+.dbeaver/
+.metadata/
+Scripts/
+Diagrams/
+General/
+*.bkp
+*.dbeaver-data-sources.xml
+
+# --- Środowisko i Hasła (BEZPIECZEŃSTWO) ---
+.env
+.env.local
+config.js
+secrets.txt
+passwords.txt
+# Jeśli trzymasz dane do połączenia w pliku tekstowym - zablokuj go:
+connection_details.txt
+
+# --- Edytory kodu (VS Code, JetBrains) ---
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- Pliki tymczasowe i Logi PostgreSQL ---
+*.log
+*.bak
+*.tmp
+*.dump
+pg_dump_*.sql
+
+# --- Inne śmieci ---
+dist/
+node_modules/
+__pycache__/
