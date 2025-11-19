@@ -38,4 +38,8 @@ pg_dump_*.sql
 # --- Inne śmieci ---
 dist/
 node_modules/
+
 __pycache__/
+# --- Windows WSL Junk ---
+*:Zone.Identifier
+* - Copy.sql
