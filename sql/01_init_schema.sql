@@ -1,14 +1,14 @@
--- 1. Sprzątanie (na wypadek gdybyś musiał zresetować bazę)
+-- Czyszczenie (na wszelki wypadek)
 DROP SCHEMA public CASCADE;
 CREATE SCHEMA public;
 
--- 2. Tworzenie Typów Wyliczeniowych (ENUM)
+-- Tworzenie Typów Wyliczeniowych (ENUM)
 CREATE TYPE obecnosc_status AS ENUM ('Nieobecny', 'Obecny', 'Anulowany');
 CREATE TYPE karnet_status AS ENUM ('Aktywny', 'Wygasły', 'Zamrozony', 'Anulowany');
 CREATE TYPE metoda_platnosci AS ENUM ('Karta', 'Gotowka', 'Przelew', 'Blik');
 CREATE TYPE zrodlo_punktow AS ENUM ('zakup', 'obecnosc', 'bonus', 'refund', 'wymiana_na_nagrode');
 
--- 3. Tworzenie Tabel (w kolejności zależności - najpierw te bez FK!)
+-- Tworzenie tabel
 
 CREATE TABLE Klienci (
     id_klienta SERIAL PRIMARY KEY,
@@ -47,7 +47,7 @@ CREATE TABLE Typy_Karnetow (
     nazwa VARCHAR(100) NOT NULL,
     cena NUMERIC(10, 2) CHECK (cena > 0),
     dlugosc_w_dniach INT CHECK (dlugosc_w_dniach > 0),
-    liczba_wejsc INT, -- NULL oznacza brak limitu (open)
+    liczba_wejsc INT, 
     opis TEXT,
     punkty_lojalnosciowe_za_zakup INT DEFAULT 0
 );
@@ -60,7 +60,7 @@ CREATE TABLE Nagrody (
     czy_aktywna BOOLEAN DEFAULT TRUE
 );
 
--- 4. Tworzenie Tabel z Kluczami Obcymi (FK)
+-- Tworzenie tabel z kluczami obcymi (fk)
 
 CREATE TABLE Harmonogram_Zajec (
     id_harmonogramu SERIAL PRIMARY KEY,
@@ -77,7 +77,6 @@ CREATE TABLE Zapisy_Na_Zajecia (
     id_harmonogramu INT NOT NULL REFERENCES Harmonogram_Zajec(id_harmonogramu),
     data_zapisu TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     status_obecnosci obecnosc_status DEFAULT 'Nieobecny',
-    -- Jeden klient nie może zapisać się dwa razy na te same zajęcia
     UNIQUE(id_klienta, id_harmonogramu) 
 );
 
@@ -85,7 +84,7 @@ CREATE TABLE Sprzedane_Karnety (
     id_sprzedanego_karnetu SERIAL PRIMARY KEY,
     id_klienta INT NOT NULL REFERENCES Klienci(id_klienta),
     id_typu_karnetu INT NOT NULL REFERENCES Typy_Karnetow(id_typu_karnetu),
-    cena_transakcyjna NUMERIC(10, 2) NOT NULL CHECK (cena_transakcyjna > 0), -- NOWE: Cena w dniu zakupu
+    cena_transakcyjna NUMERIC(10, 2) NOT NULL CHECK (cena_transakcyjna > 0),
     data_zakupu DATE NOT NULL DEFAULT CURRENT_DATE,
     data_aktywacji DATE,
     data_wygasniecia DATE NOT NULL,
@@ -112,21 +111,21 @@ CREATE TABLE Klienci_Nagrody (
     czy_wykorzystana BOOLEAN DEFAULT FALSE
 );
 
--- 5. Tabela "wszystko widząca" - Punkty
--- Uwaga: Tu referencje są NULLABLE, bo punkty mogą być za różne rzeczy
+-- tabela "wszystko widząca" - Punkty
+-- Tu referencje są NULLABLE bo punkty mogą być za różne rzeczy
 CREATE TABLE Punkty_Lojalnosciowe (
     id_transakcji SERIAL PRIMARY KEY,
     id_klienta INT NOT NULL REFERENCES Klienci(id_klienta),
-    ilosc_punktow NUMERIC NOT NULL, -- Może być ujemne przy wydawaniu!
+    ilosc_punktow NUMERIC NOT NULL, -- Może być ujemne przy wydawaniu
     data_transakcji TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     zrodlo zrodlo_punktow NOT NULL,
     id_zapisu INT REFERENCES Zapisy_Na_Zajecia(id_zapisu),
     id_sprzedanego_karnetu INT REFERENCES Sprzedane_Karnety(id_sprzedanego_karnetu),
-    id_wymiany_nagrody INT REFERENCES Klienci_Nagrody(id), -- Opcjonalnie, dla ścisłości
+    id_wymiany_nagrody INT REFERENCES Klienci_Nagrody(id), 
     opis VARCHAR(255)
 );
 
--- Indeksy dla wydajności (Kuba będzie zadowolony)
+-- Indeksy dla wydajności
 CREATE INDEX idx_zapisy_klient ON Zapisy_Na_Zajecia(id_klienta);
 CREATE INDEX idx_zapisy_harmonogram ON Zapisy_Na_Zajecia(id_harmonogramu);
 CREATE INDEX idx_harmonogram_data ON Harmonogram_Zajec(data_godzina_rozpoczecia);

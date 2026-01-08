@@ -1,10 +1,7 @@
--- 02_seed_data.sql
--- Generowanie danych testowych zgodnych z realiami rynku fitness w Polsce (Q3 2025)
--- Waluta systemu: PLN (Cena) | Punkty (Lojalność: 1 PLN wydany = ok. 1-1.5 pkt)
-
--- ==========================================
--- 1. TYPY KARNETÓW (Ceny rynkowe)
--- ==========================================
+-- Dane testowe 
+-- Walita PLN
+-- 1 PLN = 1 pkt 
+-- Typy karnetow 
 INSERT INTO Typy_Karnetow (nazwa, cena, dlugosc_w_dniach, liczba_wejsc, opis, punkty_lojalnosciowe_za_zakup) VALUES 
 ('Standard Open Miesięczny', 159.00, 30, NULL, 'Nielimitowany dostęp 24/7, siłownia + fitness. Najpopularniejszy wybór.', 160),
 ('Student Open', 109.00, 30, NULL, 'Zniżka studencka (-30%). Wymagana legitymacja. Dostęp do 16:00.', 110),
@@ -13,12 +10,9 @@ INSERT INTO Typy_Karnetow (nazwa, cena, dlugosc_w_dniach, liczba_wejsc, opis, pu
 ('Roczny Prepaid (VIP)', 1199.00, 365, NULL, 'Płatność z góry za rok. Oszczędzasz 700 zł rocznie. W cenie ręcznik i woda.', 1500),
 ('Wejściówka Jednorazowa', 39.00, 1, 1, 'Jeden trening bez zobowiązań.', 10);
 
--- ==========================================
--- 2. NAGRODY (Ekonomia: Marża klubu na produktach detalicznych)
--- Ceny punktowe ustawione tak, by klient musiał być aktywny min. 2-3 miesiące na małą nagrodę.
--- ==========================================
+-- Nagrody
 INSERT INTO Nagrody (nazwa, koszt_w_punktach, opis) VALUES 
--- Drobne nagrody (Szybka gratyfikacja)
+-- Drobne nagrody 
 ('Baton Proteinowy (Matrix Pro)', 250, 'Szybka dawka białka po treningu. Różne smaki.'),
 ('Napój Izotoniczny (0.7L)', 150, 'Nawodnienie podczas treningu.'),
 ('Shake Waniliowy (30g WPC)', 300, 'Świeżo robiony shake białkowy w recepcji.'),
@@ -34,9 +28,8 @@ INSERT INTO Nagrody (nazwa, koszt_w_punktach, opis) VALUES
 ('Trening Personalny (60 min)', 5000, 'Indywidualna sesja z trenerem o wartości 150 zł.'),
 ('Zniżka -50% na kolejny miesiąc', 6000, 'Zapłać połowę za następny karnet.');
 
--- ==========================================
--- 3. TYPY ZAJĘĆ (Trendy rynkowe 2025)
--- ==========================================
+-- Typy zajec
+
 INSERT INTO Typy_Zajec (nazwa, opis, punkty_za_obecnosc, maksymalny_limit_miejsc) VALUES 
 ('CrossFit WOD', 'Trening funkcjonalny o wysokiej intensywności. Budowanie siły i kondycji.', 25, 12),
 ('Joga Vinyasa', 'Dynamiczna joga łącząca ruch z oddechem. Redukcja stresu.', 20, 15),
@@ -45,33 +38,26 @@ INSERT INTO Typy_Zajec (nazwa, opis, punkty_za_obecnosc, maksymalny_limit_miejsc
 ('Trening Obwodowy', 'Stacje ćwiczeniowe na maszynach. Idealne dla początkujących.', 15, 15),
 ('Siłownia (Wejście Wolne)', 'Indywidualny trening bez instruktora.', 5, 100);
 
--- ==========================================
--- 4. TRENERZY (Specjaliści)
--- ==========================================
+-- Trenerzy testowi
 INSERT INTO Trenerzy (imie, nazwisko, specjalizacja, email) VALUES 
 ('Piotr', 'Kowalski', 'CrossFit & Dwubój', 'piotr.kow@fitness.pl'),
 ('Anna', 'Nowak', 'Joga & Pilates', 'anna.now@fitness.pl'),
-('Marek', 'Siłacz', 'Kulturystyka & Dieta', 'marek.sil@fitness.pl'),
-('Kasia', 'Zwinna', 'Zumba & Taniec', 'kasia.zwi@fitness.pl');
+('Marek', 'Stanowski', 'Kulturystyka & Dieta', 'marek.stan@fitness.pl'),
+('Kasia', 'Bąk', 'Zumba & Taniec', 'kasia.bak@fitness.pl');
 
--- ==========================================
--- 5. PRZYKŁADOWI KLIENCI (Seed Data)
--- ==========================================
+-- klienci testowi
 INSERT INTO Klienci (imie, nazwisko, email, telefon, data_rejestracji) VALUES 
-('Jan', 'Testowy', 'jan.test@gmail.com', '500100100', CURRENT_DATE - INTERVAL '3 month'),
-('Maria', 'Przykładowa', 'maria.prz@onet.pl', '600200200', CURRENT_DATE - INTERVAL '1 month'),
-('Tomasz', 'Biegacz', 'tomek.bieg@wp.pl', '700300300', CURRENT_DATE - INTERVAL '10 day'),
-('Julia', 'Aktywna', 'julia.akt@gmail.com', '800400400', CURRENT_DATE);
+('Jan', 'Nowak', 'jan.now@gmail.com', '500100100', CURRENT_DATE - INTERVAL '3 month'),
+('Maria', 'Kowalczyk', 'maria.kow@onet.pl', '600200200', CURRENT_DATE - INTERVAL '1 month'),
+('Tomasz', 'Kowalski', 'tomek.kow@wp.pl', '700300300', CURRENT_DATE - INTERVAL '10 day'),
+('Julia', 'Lewandowska', 'julia.lew@gmail.com', '800400400', CURRENT_DATE);
 
--- ==========================================
--- 6. SYMULACJA HISTORII (Opcjonalne - żeby baza nie była pusta)
--- Dodajemy jeden aktywny karnet dla Jana Testowego
--- ==========================================
+-- symulacja historii
 INSERT INTO Sprzedane_Karnety (id_klienta, id_typu_karnetu, cena_transakcyjna, data_zakupu, data_aktywacji, data_wygasniecia, status) 
 VALUES 
 (1, 1, 159.00, CURRENT_DATE - INTERVAL '10 day', CURRENT_DATE - INTERVAL '10 day', CURRENT_DATE + INTERVAL '20 day', 'Aktywny');
 
--- Dodajemy wstępne punkty za zakup tego karnetu (ręcznie, bo triggerów jeszcze nie ma!)
+-- Dodajemy wstępne punkty za zakup tego karnetu 
 INSERT INTO Punkty_Lojalnosciowe (id_klienta, ilosc_punktow, zrodlo, id_sprzedanego_karnetu, opis)
 VALUES
-(1, 160, 'zakup', 1, 'Punkty startowe za karnet (Manual Seed)');
+(1, 160, 'zakup', 1, 'Punkty startowe za karnet');
