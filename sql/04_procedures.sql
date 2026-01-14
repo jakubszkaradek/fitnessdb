@@ -38,7 +38,10 @@ BEGIN
         CURRENT_DATE, 
         v_data_aktywacji, 
         v_data_aktywacji + (v_dni || ' days')::INTERVAL,
-        CASE WHEN v_data_aktywacji > CURRENT_DATE THEN 'Zamrozony' ELSE 'Aktywny' END
+        CASE 
+            WHEN v_data_aktywacji > CURRENT_DATE THEN 'Zamrozony'::karnet_status 
+            ELSE 'Aktywny'::karnet_status 
+        END
     ) RETURNING id_sprzedanego_karnetu INTO v_id_sprzedanego;
 
     INSERT INTO Platnosci (
@@ -50,7 +53,6 @@ BEGIN
     RAISE NOTICE 'Karnet zakupiony pomyślnie. ID: %, Aktywacja: %', v_id_sprzedanego, v_data_aktywacji;
 END;
 $$;
-
 
 -- PROCEDURA 2: Zapis na Zajęcia (Z walidacją)
 -- Co robi: Sprawdza, czy klient ma aktywny karnet, czy są miejsca i czy nie przekroczono limitu wejść.
@@ -148,7 +150,7 @@ END;
 $$;
 
 -- PROCEDURA 4: Zamrażanie Karnetu
--- Co robi: Zmienia status na 'Zamrozony' i przesuwa datę wygaśnięcia (max 30 dni)
+-- Co robi: Zmienia status na 'Zamrozony', ustawia datę odmrożenia i przesuwa datę wygaśnięcia (max 30 dni)
 
 CREATE OR REPLACE PROCEDURE sp_zamroz_karnet(
     p_id_karnetu INT,
@@ -159,6 +161,7 @@ AS $$
 DECLARE
     v_aktualny_status karnet_status;
     v_data_wygasniecia DATE;
+    v_zamrozony_do DATE;
 BEGIN
     -- Sprawdzenie aktualnego statusu
     SELECT status, data_wygasniecia INTO v_aktualny_status, v_data_wygasniecia
@@ -181,19 +184,23 @@ BEGIN
         RAISE EXCEPTION 'Maksymalny okres zamrożenia to 30 dni!';
     END IF;
 
-    -- Zamrożenie karnetu i przesunięcie daty wygaśnięcia
+    -- Oblicz datę automatycznego odmrożenia
+    v_zamrozony_do := CURRENT_DATE + p_liczba_dni;
+
+    -- Zamrożenie karnetu z ustawieniem daty automatycznego odmrożenia
     UPDATE Sprzedane_Karnety
     SET status = 'Zamrozony',
+        zamrozony_do = v_zamrozony_do,
         data_wygasniecia = v_data_wygasniecia + (p_liczba_dni || ' days')::INTERVAL
     WHERE id_sprzedanego_karnetu = p_id_karnetu;
 
-    RAISE NOTICE 'Karnet ID % zamrożony na % dni. Nowa data wygaśnięcia: %', 
-        p_id_karnetu, p_liczba_dni, v_data_wygasniecia + (p_liczba_dni || ' days')::INTERVAL;
+    RAISE NOTICE 'Karnet ID % zamrożony do %. Nowa data wygaśnięcia: %', 
+        p_id_karnetu, v_zamrozony_do, v_data_wygasniecia + (p_liczba_dni || ' days')::INTERVAL;
 END;
 $$;
 
--- PROCEDURA 5: Odmrażanie Karnetu
--- Co robi: Przywraca status 'Aktywny' dla zamrożonego karnetu
+-- PROCEDURA 5: Odmrażanie Karnetu (ręczne, wcześniejsze)
+-- Co robi: Przywraca status 'Aktywny' dla zamrożonego karnetu i czyści datę zamrożenia
 
 CREATE OR REPLACE PROCEDURE sp_odmroz_karnet(
     p_id_karnetu INT
@@ -216,26 +223,61 @@ BEGIN
     END IF;
 
     UPDATE Sprzedane_Karnety
-    SET status = 'Aktywny'
+    SET status = 'Aktywny',
+        zamrozony_do = NULL  -- Czyścimy datę zamrożenia przy ręcznym odmrożeniu
     WHERE id_sprzedanego_karnetu = p_id_karnetu;
 
     RAISE NOTICE 'Karnet ID % został odmrożony i jest teraz aktywny.', p_id_karnetu;
 END;
 $$;
 
--- PROCEDURA 6: Automatyczna Aktywacja Karnetów
--- Co robi: Aktywuje karnety z przyszłą datą aktywacji, gdy nadejdzie ich termin
+-- PROCEDURA 6: Dzienna konserwacja karnetów
+-- Co robi: 
+--   a) Automatycznie odmraża karnety, których zamrozony_do minęło
+--   b) Aktywuje karnety z przyszłą datą aktywacji (gdy nadszedł termin)
+--   c) Wygasza karnety, które straciły ważność
+-- Zalecane uruchamianie: codziennie w nocy (np. przez pg_cron lub zewnętrzny scheduler)
 
-CREATE OR REPLACE PROCEDURE sp_aktywuj_karnety()
+CREATE OR REPLACE PROCEDURE sp_dzienna_konserwacja_karnetow()
 LANGUAGE plpgsql
 AS $$
+DECLARE
+    v_odmrozone INT;
+    v_aktywowane INT;
+    v_wygasle INT;
 BEGIN
+    -- a) Automatyczne odmrażanie karnetów, których data zamrozony_do minęła
+    UPDATE Sprzedane_Karnety
+    SET status = 'Aktywny',
+        zamrozony_do = NULL
+    WHERE status = 'Zamrozony' 
+      AND zamrozony_do IS NOT NULL 
+      AND zamrozony_do <= CURRENT_DATE
+      AND data_wygasniecia >= CURRENT_DATE;  -- Nie odmrażaj wygasłych
+    
+    GET DIAGNOSTICS v_odmrozone = ROW_COUNT;
+    
+    -- b) Aktywacja karnetów z przyszłą datą aktywacji (gdy nadszedł termin)
     UPDATE Sprzedane_Karnety
     SET status = 'Aktywny'
     WHERE status = 'Zamrozony' 
+      AND data_aktywacji IS NOT NULL
       AND data_aktywacji <= CURRENT_DATE
+      AND zamrozony_do IS NULL  -- Nie aktywuj ręcznie zamrożonych karnetów
       AND data_wygasniecia >= CURRENT_DATE;
     
-    RAISE NOTICE 'Aktywowano karnety z dzisiejszą datą aktywacji.';
+    GET DIAGNOSTICS v_aktywowane = ROW_COUNT;
+    
+    -- c) Wygaszanie przeterminowanych karnetów
+    UPDATE Sprzedane_Karnety
+    SET status = 'Wygasły',
+        zamrozony_do = NULL  -- Wyczyść zamrożenie dla wygasłych
+    WHERE status IN ('Aktywny', 'Zamrozony') 
+      AND data_wygasniecia < CURRENT_DATE;
+    
+    GET DIAGNOSTICS v_wygasle = ROW_COUNT;
+    
+    RAISE NOTICE 'Konserwacja zakończona. Odmrożone: %, Aktywowane: %, Wygasłe: %', 
+        v_odmrozone, v_aktywowane, v_wygasle;
 END;
 $$;

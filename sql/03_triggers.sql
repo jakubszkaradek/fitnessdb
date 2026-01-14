@@ -119,19 +119,8 @@ AFTER INSERT ON Klienci_Nagrody
 FOR EACH ROW
 EXECUTE FUNCTION trg_funkcja_odejmij_punkty();
 
--- TRIGGER 4: Automatyczne wygaszanie karnetów 
-
-CREATE OR REPLACE PROCEDURE sp_odswiez_statusy_karnetow()
-LANGUAGE plpgsql
-AS $$
-BEGIN
-    UPDATE Sprzedane_Karnety
-    SET status = 'Wygasły'
-    WHERE status = 'Aktywny' AND data_wygasniecia < CURRENT_DATE;
-    
-    RAISE NOTICE 'Zaktualizowano statusy przeterminowanych karnetów.';
-END;
-$$;
+-- UWAGA: Funkcjonalność automatycznego wygaszania karnetów została przeniesiona
+-- do procedury sp_dzienna_konserwacja_karnetow() w pliku 04_procedures.sql
 
 -- TRIGGER 5: Automatyczna inkrementacja/dekrementacja wykorzystanych wejść
 -- Kiedy: Gdy status w Zapisy_Na_Zajecia zmieni się na 'Obecny' lub zostanie cofnięty

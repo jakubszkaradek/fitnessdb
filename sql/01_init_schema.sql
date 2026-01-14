@@ -90,6 +90,7 @@ CREATE TABLE Sprzedane_Karnety (
     data_wygasniecia DATE NOT NULL,
     status karnet_status DEFAULT 'Aktywny',
     liczba_wykorzystanych_wejsc INT DEFAULT 0,
+    zamrozony_do DATE DEFAULT NULL,  -- Data automatycznego odmrożenia karnetu
     CHECK (data_wygasniecia >= data_zakupu)
 );
 
@@ -131,3 +132,4 @@ CREATE INDEX idx_zapisy_harmonogram ON Zapisy_Na_Zajecia(id_harmonogramu);
 CREATE INDEX idx_harmonogram_data ON Harmonogram_Zajec(data_godzina_rozpoczecia);
 CREATE INDEX idx_karnety_klient ON Sprzedane_Karnety(id_klienta);
 CREATE INDEX idx_karnety_status ON Sprzedane_Karnety(status);
+CREATE INDEX idx_karnety_zamrozony_do ON Sprzedane_Karnety(zamrozony_do);
