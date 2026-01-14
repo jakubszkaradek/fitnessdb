@@ -26,6 +26,7 @@ SELECT
     k.imie,
     k.nazwisko,
     k.email,
+    sk.id_sprzedanego_karnetu,
     tk.nazwa AS typ_karnetu,
     sk.data_zakupu,
     sk.data_wygasniecia,
